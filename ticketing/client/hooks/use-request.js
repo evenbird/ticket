@@ -4,10 +4,14 @@ import { useState } from 'react'
 export default ({ url, method, body, onSuccess }) => {
     const [errors, setErrors] = useState(null)
 
+    console.log({ url, method, body, onSuccess });
+
     const doRequest = async () => {
         try {
             setErrors(null)
             const response = await axios[method](url, body)
+            // console.log(response);
+
             if (onSuccess) {
                 onSuccess(response.data)
             }

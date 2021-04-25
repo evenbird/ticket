@@ -9,17 +9,20 @@ interface UserAttrs {
 
 //an interface that describes the properties
 //that a User Model has
+//represent thw entire collection of data
 interface UserModel extends mongoose.Model<UserDoc>{
     build(attrs:UserAttrs):UserDoc;
 }
 
 //an interface that describes the properties
 //that a User Document has
+//one single data
 interface UserDoc extends mongoose.Document{
     email:string
     password:string    
 }
 
+// mapping mongo db schema to our own schema
 const userSchema = new mongoose.Schema(
 {
     email:{
@@ -42,6 +45,7 @@ const userSchema = new mongoose.Schema(
     }
 })
 
+// pre save hook
 userSchema.pre('save',async function(done){
     if(this.isModified('password')){
         const hashed =await Password.toHash(this.get('password'))
@@ -50,6 +54,7 @@ userSchema.pre('save',async function(done){
     done()
 })
 
+// define build function. allow type script to perform type check of the record during the build
 userSchema.statics.build = (attrs:UserAttrs) =>{
     return new User(attrs)
 }

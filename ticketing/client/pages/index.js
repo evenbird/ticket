@@ -3,7 +3,7 @@ import buldClient from '../api/build-client'
 
 const LandingPage = ({ currentuser }) => {
     console.log(currentuser);
-    return <h1>Landing Page</h1>
+    return currentuser ? <h1>You are signed in</h1> : <h1>You are NOT signed in</h1>
 }
 
 LandingPage.getInitialProps = async (context) => {
