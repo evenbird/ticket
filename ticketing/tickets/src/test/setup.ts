@@ -1,61 +1,66 @@
-import {MongoMemoryServer} from 'mongodb-memory-server'
-import mongoose from 'mongoose'
-import jwt from 'jsonwebtoken'
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+import request from 'supertest';
+import { app } from '../app';
+import jwt from 'jsonwebtoken';
 
-declare global{
-    namespace NodeJS{
-        interface Global{
-            signin():string[]
-        }
+declare global {
+  namespace NodeJS {
+    interface Global {
+      signin(): string[];
     }
+  }
 }
 
-let mongo:any
-beforeAll(async ()=>{
-    process.env.JWT_KEY = 'asdfasdf'
-    mongo = new MongoMemoryServer();
-    const mongoUri = await mongo.getUri()
+jest.mock('../nats-wrapper')
 
-    await mongoose.connect(mongoUri,{
-        useNewUrlParser:true,
-        useUnifiedTopology:true
-    })
-})
+let mongo: any;
+beforeAll(async () => {
+  process.env.JWT_KEY = 'asdfasdf';
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-beforeEach(async () =>{
-    const collections = await mongoose.connection.db.collections()
+  mongo = new MongoMemoryServer();
+  const mongoUri = await mongo.getUri();
 
-    for (let collection of collections){
-        await collection.deleteMany({})
-    }
-})
+  await mongoose.connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+});
 
-afterAll(async ()=>{
-    await mongo.stop()
-    await mongoose.connection.close()
-})
+beforeEach(async () => {
+  jest.clearAllMocks()
+  const collections = await mongoose.connection.db.collections();
+
+  for (let collection of collections) {
+    await collection.deleteMany({});
+  }
+});
+
+afterAll(async () => {
+  await mongo.stop();
+  await mongoose.connection.close();
+});
 
 global.signin = () => {
+  // Build a JWT payload.  { id, email }
+  const payload = {
+    id: new mongoose.Types.ObjectId().toHexString(),
+    email: 'test@test.com',
+  };
 
-    //build a JWT payload. { id, email}
-    const payload = {
-        id:'fakeid',
-        email:'fakeEmail'
-    }
+  // Create the JWT!
+  const token = jwt.sign(payload, process.env.JWT_KEY!);
 
-    //create the JWT!
-    const token = jwt.sign(payload,process.env.JWT_KEY!);
+  // Build session Object. { jwt: MY_JWT }
+  const session = { jwt: token };
 
-    //Build session Object. { jwt: MY_JWT}
-    const session = {jwt:token}
+  // Turn that session into JSON
+  const sessionJSON = JSON.stringify(session);
 
-    //turn this session to string
-    const sessionJSON = JSON.stringify(session)
+  // Take JSON and encode it as base64
+  const base64 = Buffer.from(sessionJSON).toString('base64');
 
-    //Take JSON and encode it as base64
-    //https://www.base64decode.org/
-    const base64 = Buffer.from(sessionJSON).toString('base64')
-
-    //return a string that the cookie with encoded data
-    return [`express:sess=${base64}`]
-}
+  // return a string thats the cookie with the encoded data
+  return [`express:sess=${base64}`];
+};
